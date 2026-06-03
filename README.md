@@ -11,18 +11,18 @@ Part of the [unpins](https://unpins.org) project — native single-binary builds
 
 Encodes WAV/AIFF/raw PCM to MP3 (and decodes MP3 back to WAV) with `libmp3lame` linked in statically.
 
-## Installation
+## Usage
 
-Install with [unpin](https://github.com/unpins/unpin):
+Run the `lame` program with [unpin](https://github.com/unpins/unpin):
 
 ```bash
-unpin lame
+unpin lame in.wav out.mp3
 ```
 
-Or run without installing:
+To install it onto your PATH:
 
 ```bash
-unpin run lame --version
+unpin install lame
 ```
 
 ## Build locally
