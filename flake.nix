@@ -1,5 +1,5 @@
 {
-  description = "Standalone build of the LAME MP3 encoder CLI";
+  description = "the LAME MP3 encoder CLI as a single self-contained binary";
 
   nixConfig = {
     extra-substituters = [ "https://unpins.cachix.org" ];
