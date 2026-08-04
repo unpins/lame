@@ -23,6 +23,26 @@
   outputs = { self, unpins-lib }:
     let
       ulib = unpins-lib.lib;
+      # clang rejects an always_inline SSE intrinsic inlined into a function
+      # compiled without the feature, and the i686 baseline has no SSE — the
+      # configure probe misses it because `_mm_sfence()` alone compiles. Give
+      # the feature to the one file that holds the SSE routines: upstream picks
+      # them at RUNTIME (has_SSE), so a CPU without SSE still takes the C path.
+      # Dropping HAVE_XMMINTRIN_H instead would ship i686 with no SSE path at all.
+      sseTargetAttr = pkgs: drv:
+        if pkgs.stdenv.hostPlatform.isx86_32
+        then drv.overrideAttrs (old: {
+          postPatch = (old.postPatch or "") + ''
+            substituteInPlace libmp3lame/vector/xmm_quantize_sub.c \
+              --replace-fail '#ifdef HAVE_XMMINTRIN_H' \
+                '#ifdef HAVE_XMMINTRIN_H
+            #pragma clang attribute push(__attribute__((target("sse"))), apply_to = function)' \
+              --replace-fail '#endif	/* HAVE_XMMINTRIN_H */' \
+                '#pragma clang attribute pop
+            #endif	/* HAVE_XMMINTRIN_H */'
+          '';
+        })
+        else drv;
       # Gate the override itself on darwin so the Linux/cross builds keep their
       # exact derivation (no empty-postConfigure rebuild).
       foldLibtoolStatic = pkgs: drv:
@@ -37,9 +57,15 @@
     ulib.mkStandaloneFlake {
       inherit self;
       name = "lame";
+
+      # Build via the unpin-llvm engine + emit a bitcode multicall module.
+      engine = "unpin-llvm";
+      multicall = {
+        programs = [{ name = "lame"; }];
+      };
       smoke = [ "--version" ];
       smokePattern = "3\\.100";
-      build = pkgs: foldLibtoolStatic pkgs pkgs.pkgsStatic.lame;
+      build = pkgs: foldLibtoolStatic pkgs (sseTargetAttr pkgs pkgs.pkgsStatic.lame);
       windowsBuild = pkgs: (ulib.mingwStaticCross pkgs).lame;
     };
 }
