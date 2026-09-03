@@ -61,6 +61,8 @@
       # Build via the unpin-llvm engine + emit a bitcode multicall module.
       engine = "unpin-llvm";
       multicall = {
+        # The `.exe` on the engine too, not the nixpkgs mingw-gcc cross.
+        windows = true;
         programs = [{ name = "lame"; }];
       };
       smoke = [ "--version" ];
