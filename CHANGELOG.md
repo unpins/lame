@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- ID3 tags written by `--tt`, `--ta`, `--tl`, `--ty`, `--tg` and `--tv` came
+  out empty on Linux. The title was stored as an empty UTF-16 string, so tag
+  editors and players showed nothing. Every Linux binary released so far,
+  including 3.100-1, is affected; macOS and Windows were not.
+
+- On Windows, `--id3v2-utf16` and `--id3v2-latin1` did not exist. They are
+  there now, and accented text in tags works the same as on Linux and macOS.
+
 ### Changed
 
 - The Windows binary is now built by the same compiler as the Linux and macOS

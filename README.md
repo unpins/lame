@@ -52,4 +52,7 @@ The [Releases](https://github.com/unpins/lame/releases) page has standalone bina
 
 - Single upstream CLI (`lame`); `libmp3lame` is linked in statically.
 - **Windows:** `mingw` cross, single `.exe`, no companion DLLs.
-- **No upstream features disabled** on any platform.
+- **No upstream features disabled** on any platform. The ID3 tag options
+  (`--tt`, `--ta`, `--tl`, `--id3v2-utf16`, `--id3v2-latin1`, …) accept
+  accented text on Linux, macOS and Windows alike; the text is read in the
+  character set your shell uses.
