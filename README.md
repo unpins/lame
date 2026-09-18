@@ -9,7 +9,7 @@
 
 Part of the [unpins](https://unpins.org) catalog; install it with [`unpin`](https://github.com/unpins/unpin): `unpin install lame`.
 
-Encodes WAV/AIFF/raw PCM to MP3 (and decodes MP3 back to WAV) with `libmp3lame` linked in statically.
+Encodes WAV/AIFF/raw PCM to MP3 (and decodes MP3 back to WAV) with `libmp3lame` built in.
 
 ## Usage
 
