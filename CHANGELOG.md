@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [3.100-2] - 2026-09-26
+
 ### Fixed
 
 - ID3 tags written by `--tt`, `--ta`, `--tl`, `--ty`, `--tg` and `--tv` came
