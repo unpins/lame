@@ -33,33 +33,10 @@
           '';
         })
         else drv;
-      # Every ID3v2 text tag came out EMPTY on the six musl targets: `--tt
-      # Titulo` wrote a TIT2 frame holding the UTF-16 BOM and nothing else. Not
-      # a niche path — with ID3TAGS_EXTENDED on, the default text encoding is
-      # TENC_UTF16, so --tt/--ta/--tl/--ty/--tg/--tv were all affected, and the
-      # shipped v3.100-1 Linux binaries have it.
-      #
-      # toUtf16() writes the BOM into the buffer BEFORE checking whether
-      # iconv_open("UTF-16LE//TRANSLIT", ...) succeeded, and on failure hands
-      # that two-byte buffer back as the converted string. musl's iconv has no
-      # //TRANSLIT, so the open always failed and the tag was always just the
-      # BOM. glibc and GNU libiconv do have it — which is why the nixpkgs build
-      # and macOS looked fine, and why Windows (no iconv at all, so it fell back
-      # to Latin-1) looked fine too. Only what we ship on Linux was broken.
-      #
-      # Fall back to the plain charset name when the //TRANSLIT form is
-      # rejected. Where //TRANSLIT works nothing changes; on musl the
-      # conversion now runs, and the bytes match a glibc lame exactly.
+      # ID3v2 text tags came out empty on musl (no //TRANSLIT in its iconv);
+      # the measured why is in the patch header.
       translitFallback = drv: drv.overrideAttrs (old: {
-        postPatch = (old.postPatch or "") + ''
-          substituteInPlace frontend/parse.c \
-            --replace-fail 'iconv_open("ISO_8859-1//TRANSLIT", cur_code);' \
-              'iconv_open("ISO_8859-1//TRANSLIT", cur_code);
-            if (xiconv == (iconv_t)-1) xiconv = iconv_open("ISO-8859-1", cur_code);' \
-            --replace-fail 'iconv_open("UTF-16LE//TRANSLIT", cur_code);' \
-              'iconv_open("UTF-16LE//TRANSLIT", cur_code);
-            if (xiconv == (iconv_t)-1) xiconv = iconv_open("UTF-16LE", cur_code);'
-        '';
+        patches = (old.patches or [ ]) ++ [ ./patches/iconv-translit-fallback.patch ];
       });
       # Windows was the only target without `--id3v2-utf16`/`--id3v2-latin1`;
       # the other eight have them. Upstream turns them on with ID3TAGS_EXTENDED,

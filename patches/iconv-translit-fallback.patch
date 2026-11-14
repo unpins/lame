@@ -1,0 +1,34 @@
+frontend: fall back to the plain charset when iconv has no //TRANSLIT.
+
+Every ID3v2 text tag came out EMPTY on musl: `--tt Titulo` wrote a TIT2 frame
+holding the UTF-16 BOM and nothing else. With ID3TAGS_EXTENDED on, the default
+text encoding is TENC_UTF16, so --tt/--ta/--tl/--ty/--tg/--tv were all affected.
+
+toUtf16() writes the BOM into the buffer BEFORE checking whether
+iconv_open("UTF-16LE//TRANSLIT", ...) succeeded, and on failure hands that
+two-byte buffer back as the converted string. musl's iconv has no //TRANSLIT,
+so the open always failed and the tag was always just the BOM. glibc and GNU
+libiconv do have it, which is why glibc builds and macOS look fine.
+
+Fall back to the plain charset name when the //TRANSLIT form is rejected.
+Where //TRANSLIT works nothing changes; on musl the conversion now runs, and
+the bytes match a glibc lame exactly.
+
+--- a/frontend/parse.c
++++ b/frontend/parse.c
+@@ -233,6 +233,7 @@
+         if (dst != 0) {
+             char* cur_code = nl_langinfo(CODESET);
+             iconv_t xiconv = iconv_open("ISO_8859-1//TRANSLIT", cur_code);
++            if (xiconv == (iconv_t)-1) xiconv = iconv_open("ISO-8859-1", cur_code);
+             if (xiconv != (iconv_t)-1) {
+                 char* i_ptr = (char*)src;
+                 char* o_ptr = dst;
+@@ -259,6 +260,7 @@
+         if (dst != 0) {
+             char* cur_code = nl_langinfo(CODESET);
+             iconv_t xiconv = iconv_open("UTF-16LE//TRANSLIT", cur_code);
++            if (xiconv == (iconv_t)-1) xiconv = iconv_open("UTF-16LE", cur_code);
+             dst[0] = 0xff;
+             dst[1] = 0xfe;
+             if (xiconv != (iconv_t)-1) {
