@@ -9,22 +9,15 @@
   inputs.unpins-lib.url = "github:unpins/nix-lib";
 
   # LAME ships a single CLI (`lame`); the frontend links libmp3lame statically.
-  # `pkgsStatic.lame` and the mingw cross both build the portable autotools C
-  # cleanly. `--version` exits 0 and prints the version banner — a clean smoke
-  # target on every platform.
-  #
-  # The only override is darwin-specific: pkgsStatic on darwin still leaves
-  # libtool building a shared liblmp3lame (Apple has no static libSystem, so the
-  # static adapter can't fully suppress `build_libtool_libs`). The frontend then
-  # links libmp3lame.0.dylib and fails action-build's portability check. Force
-  # libtool to emit only the static archive so libmp3lame folds into the binary
-  # (libSystem stays the sole dynamic dep). Linux/musl already links static, so
-  # gate on darwin. Same fix xz uses for its liblzma.
   outputs = { self, unpins-lib }:
     let
       ulib = unpins-lib.lib;
-      # Gate the override itself on darwin so the Linux/cross builds keep their
-      # exact derivation (no empty-postConfigure rebuild).
+      # darwin: pkgsStatic still leaves libtool building a shared libmp3lame
+      # (Apple has no static libSystem, so the static adapter can't fully
+      # suppress `build_libtool_libs`), and the frontend would then link
+      # libmp3lame.0.dylib. Force libtool to emit only the static archive so
+      # libmp3lame folds into the binary. Same fix xz uses for its liblzma.
+      # Gated on darwin so the other targets keep their exact derivation.
       foldLibtoolStatic = pkgs: drv:
         if pkgs.stdenv.hostPlatform.isDarwin
         then drv.overrideAttrs (old: {
