@@ -38,84 +38,11 @@
       translitFallback = drv: drv.overrideAttrs (old: {
         patches = (old.patches or [ ]) ++ [ ./patches/iconv-translit-fallback.patch ];
       });
-      # Windows was the only target without `--id3v2-utf16`/`--id3v2-latin1`;
-      # the other eight have them. Upstream turns them on with ID3TAGS_EXTENDED,
-      # which comes either from HAVE_ICONV or from a Win32 block that explicitly
-      # excludes __MINGW32__ — the expectation being that mingw takes the iconv
-      # one. It cannot: that path calls nl_langinfo(CODESET) and mingw has no
-      # <langinfo.h>, so adding libiconv gets as far as `checking for iconv...
-      # yes` and then fails to compile. mingw fell through both and lost the
-      # options in silence; configure only prints "consider installing GNU
-      # libiconv" and carries on.
-      #
-      # The two converters upstream would use live in main.c inside that same
-      # __MINGW32__-excluded block — together with `wmain`, which the multicall
-      # fold must never see (a wide entry point leaves it with no `main`), and
-      # with the MSVC-only <crtdbg.h>/<mbstring.h>. So define them here instead,
-      # straight on the Win32 API. One hunk, one file, main.c untouched.
-      #
-      # The source encoding is CP_ACP, not the CP_UTF8 main.c uses. That is not
-      # a deviation: main.c can say UTF-8 only because its `wmain` re-encodes
-      # every argument from UTF-16 up front, and `wmain` is precisely what we
-      # cannot have. Our entry point is the narrow `main`, so the CRT already
-      # handed us argv in the ANSI code page — the same relationship the Linux
-      # build has with nl_langinfo(CODESET). Reading it as UTF-8 turns every
-      # non-ASCII title into U+FFFD (measured under wine: `Ação` -> A\ufffd\ufffdo).
-      # The limit that leaves is the ACP's own: a character it cannot represent
-      # was already lost in argv, before any code of ours runs.
+      # Windows lacked `--id3v2-utf16`/`--id3v2-latin1` (mingw takes neither of
+      # upstream's ID3TAGS_EXTENDED paths); the patch defines the converters on
+      # the Win32 API. The why, measured, is in its header.
       windowsIdTags = drv: drv.overrideAttrs (old: {
-        postPatch = (old.postPatch or "") + ''
-          substituteInPlace frontend/parse.c --replace-fail \
-            '#if defined( _WIN32 ) && !defined(__MINGW32__)
-#define ID3TAGS_EXTENDED
-
-char* toLatin1(char const* s)
-{
-    return utf8ToLatin1(s);
-}
-
-unsigned short* toUtf16(char const* s)
-{
-    return utf8ToUtf16(s);
-}
-#endif' \
-            '#if defined( _WIN32 ) && !defined(HAVE_ICONV)
-#define ID3TAGS_EXTENDED
-#include <windows.h>
-
-char* toLatin1(char const* s)
-{
-    int n = MultiByteToWideChar(CP_ACP, 0, s, -1, NULL, 0);
-    wchar_t* w = (n > 0) ? malloc(n * sizeof(wchar_t)) : NULL;
-    char* out = NULL;
-    if (w != NULL && MultiByteToWideChar(CP_ACP, 0, s, -1, w, n) != 0) {
-        int m = WideCharToMultiByte(28591, 0, w, -1, NULL, 0, NULL, NULL);
-        if (m > 0 && (out = malloc(m)) != NULL) {
-            if (WideCharToMultiByte(28591, 0, w, -1, out, m, NULL, NULL) == 0) {
-                free(out);
-                out = NULL;
-            }
-        }
-    }
-    free(w);
-    return out;
-}
-
-unsigned short* toUtf16(char const* s)
-{
-    int n = MultiByteToWideChar(CP_ACP, 0, s, -1, NULL, 0);
-    wchar_t* w = (n > 0) ? malloc((n + 1) * sizeof(wchar_t)) : NULL;
-    if (w != NULL) {
-        w[0] = 0xfeff;
-        if (MultiByteToWideChar(CP_ACP, 0, s, -1, w + 1, n) == 0) {
-            free(w);
-            w = NULL;
-        }
-    }
-    return (unsigned short*) w;
-}
-#endif'
-        '';
+        patches = (old.patches or [ ]) ++ [ ./patches/windows-id3tags-extended.patch ];
       });
       # 0.1 s of 440 Hz mono at 8 kHz, 16-bit — the smallest WAV that still
       # exercises a real encode. Kept as a constant so the check needs no
