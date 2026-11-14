@@ -52,7 +52,9 @@ The [Releases](https://github.com/unpins/lame/releases) page has standalone bina
 
 - Single upstream CLI (`lame`); `libmp3lame` is linked in statically.
 - **Windows:** built with mingw-w64.
-- **No upstream features disabled** on any platform. The ID3 tag options
-  (`--tt`, `--ta`, `--tl`, `--id3v2-utf16`, `--id3v2-latin1`, …) accept
-  accented text on Linux, macOS and Windows alike; the text is read in the
-  character set your shell uses.
+- The ID3 tag options (`--tt`, `--ta`, `--tl`, `--id3v2-utf16`,
+  `--id3v2-latin1`, …) accept accented text on Linux, macOS and Windows alike;
+  the text is read in the character set your shell uses.
+- **Not included** (as in nixpkgs): `mp3rtp`, a separate RTP streaming program
+  that upstream builds only on request; and reading input through libsndfile —
+  lame uses its own WAV/AIFF/raw reader instead.
